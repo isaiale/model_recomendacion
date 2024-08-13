@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, session
+from flask import Flask, render_template, session, request, jsonify
 import pandas as pd
 import random
 from mlxtend.frequent_patterns import apriori, association_rules
@@ -49,7 +49,7 @@ def buy(product):
         session['cart'] = []
     session['cart'].append(product)
 
-    # Obtener recomendaciones basadas en las compras
+    # Obtener recomendaciones basadas en el producto seleccionado
     recommendations = recommend_products(session['cart'])
     
     selected_product = df[df['nombre'] == product].iloc[0].to_dict()
@@ -93,6 +93,32 @@ def recommend_products(cart):
 
     return unique_recommendations
 
+@app.route('/add-to-cart', methods=['POST'])
+def add_to_cart():
+    data = request.json
+    producto_id = data.get('producto')
+    cantidad = data.get('cantidad')
+    talla = data.get('talla')
+
+    if 'cart' not in session:
+        session['cart'] = []
+
+    cart_item = {
+        'usuario': 'user._id',  # Reemplaza esto con la lógica real para obtener el ID del usuario
+        'producto': producto_id,
+        'cantidad': cantidad,
+        'talla': talla
+    }
+
+    session['cart'].append(cart_item)
+
+    # Aquí podrías agregar la lógica para enviar estos datos a tu API externa si es necesario
+    # Ejemplo de envío a la API externa:
+    response = requests.post('https://back-end-enfermera.vercel.app/api/carrito', json=cart_item)
+    if response.status_code != 200:
+        return jsonify({"error": "Error al agregar el producto al carrito en la API externa"}), 500
+
+    return jsonify({"message": "Producto agregado al carrito"})
 
 if __name__ == '__main__':
     app.run(debug=True)
